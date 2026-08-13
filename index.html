@@ -70,6 +70,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',s
 .modal-stats .stat .v{font-size:15px;font-weight:600}
 /* ETF holdings chart in modal */
 .modal-etf{padding:0 8px;border-top:1px solid #f0f0f0;display:none}
+/* Spot price section */
+.spot-section{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin:4px 16px 0;padding:12px 16px}
+.spot-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0f0f0;padding-bottom:8px;margin-bottom:8px}
+.spot-header .name{font-size:15px;font-weight:700;color:#1a1a2e}
+.spot-header .meta{font-size:11px;color:#999}
+.spot-chart{width:100%;height:300px}
 .modal-etf-title{padding:12px 16px 4px;font-size:14px;font-weight:600;color:#1a1a2e;display:flex;align-items:center;gap:8px}
 .modal-etf-title .etf-tag{font-size:11px;font-weight:400;color:#888;background:#f5f5f5;padding:2px 8px;border-radius:10px}
 #modalEtfChart{width:100%;height:280px}
@@ -108,6 +114,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',s
 <label>信号</label>
 <div id="signalChips"></div>
 </div>
+</div>
+
+<!-- Spot price section (来自本地Excel) -->
+<div class="spot-section" id="spotSection" style="display:none">
+<div class="spot-header">
+<span class="name">📊 现货价格 / 调研数据</span>
+<span class="meta">数据来源: 本地Excel · 最后更新 <span id="spotUpdateTime">--</span></span>
+</div>
+<div class="spot-chart" id="spotChart"></div>
 </div>
 
 <!-- Grid -->
@@ -159,6 +174,43 @@ document.getElementById('loading').style.display = 'none';
 renderStats();
 renderFilters();
 renderGrid();
+renderSpot();
+}
+
+function renderSpot(){
+const section = document.getElementById('spotSection');
+const chartEl = document.getElementById('spotChart');
+if(!DATA.spot_data || !DATA.spot_data.series || !DATA.spot_data.series.length){
+section.style.display = 'none';
+return;
+}
+section.style.display = 'block';
+document.getElementById('spotUpdateTime').textContent = DATA.spot_update || DATA.spot_data.latest_date || '';
+const s = DATA.spot_data;
+const palette = ['#1e88e5','#e53935','#43a047','#fb8c00','#8e24aa','#00acc1','#d81b60','#6d4c41','#3949ab','#f4511e'];
+const series = s.series.map((item,i)=>({
+name:item.name,
+type:'line',
+data:item.values,
+smooth:true,
+showSymbol:false,
+lineStyle:{width:2,color:palette[i%palette.length]},
+itemStyle:{color:palette[i%palette.length]},
+emphasis:{focus:'series'}
+}));
+const spotChart = echarts.init(chartEl);
+spotChart.setOption({
+tooltip:{trigger:'axis'},
+legend:{type:'scroll',top:0,textStyle:{fontSize:11}},
+grid:{left:55,right:20,top:34,bottom:28},
+xAxis:{type:'category',data:s.dates,axisLabel:{fontSize:10}},
+yAxis:{type:'value',scale:true,axisLabel:{fontSize:10}},
+series:series,
+dataZoom:[{type:'inside',start:Math.max(0,100-1800/s.dates.length*100),end:100},{type:'slider',height:16,bottom:2,show:true}]
+});
+spotChart.resize();
+if(window.__spotChart) window.__spotChart.dispose();
+window.__spotChart = spotChart;
 }
 
 function renderStats(){
@@ -447,6 +499,7 @@ window.addEventListener('resize',function(){
 miniCharts.forEach(c=>{if(c)c.resize();});
 if(modalChart) modalChart.resize();
 if(modalEtfChart) modalEtfChart.resize();
+if(window.__spotChart) window.__spotChart.resize();
 });
 
 // Start
