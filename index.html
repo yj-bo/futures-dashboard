@@ -167,7 +167,8 @@ const signalMeta = {
 };
 
 async function loadData(){
-const resp = await fetch('data.json');
+// cache-bust: GitHub Pages设max-age=600（10分钟）+ 浏览器缓存会让用户看到旧数据
+const resp = await fetch('data.json?t=' + Date.now(), {cache: 'no-store'});
 DATA = await resp.json();
 document.getElementById('updateTime').textContent = DATA.last_update;
 document.getElementById('loading').style.display = 'none';
